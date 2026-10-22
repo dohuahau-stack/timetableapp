@@ -1,0 +1,78 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: light;
+}
+.dark {
+  color-scheme: dark;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  @apply bg-slate-100 font-sans text-slate-800 antialiased dark:bg-[#090D16] dark:text-slate-100;
+  overflow: hidden;
+  margin: 0;
+}
+
+::selection {
+  background: rgba(29, 138, 153, 0.3);
+}
+
+/* Thanh cuộn mảnh */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(100, 116, 139, 0.4) transparent;
+}
+*::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+*::-webkit-scrollbar-thumb {
+  background: rgba(100, 116, 139, 0.4);
+  border-radius: 999px;
+}
+
+@layer components {
+  /* Liquid Glass: panel lớn (sidebar, header, to-do) */
+  .glass {
+    @apply border border-white/50 bg-white/55 backdrop-blur-3xl backdrop-saturate-150 dark:border-white/10 dark:bg-slate-900/50;
+    box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.6), 0 8px 32px rgba(0, 0, 0, 0.08);
+  }
+  .dark .glass {
+    box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.09), 0 8px 32px rgba(0, 0, 0, 0.45);
+  }
+
+  /* Liquid Glass: thẻ môn học */
+  .glass-card {
+    @apply border border-white/50 bg-white/65 backdrop-blur-2xl backdrop-saturate-150 dark:border-white/10 dark:bg-slate-800/60;
+    box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.6), 0 8px 32px rgba(0, 0, 0, 0.08);
+  }
+  .dark .glass-card {
+    box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.09), 0 8px 32px rgba(0, 0, 0, 0.4);
+  }
+
+  /* Hộp thoại: đục hơn một chút để dễ đọc */
+  .glass-panel {
+    @apply border border-white/60 bg-white/80 backdrop-blur-3xl backdrop-saturate-150 dark:border-white/10 dark:bg-slate-900/80;
+    box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.7), 0 24px 64px rgba(15, 23, 42, 0.25);
+  }
+  .dark .glass-panel {
+    box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.09), 0 24px 64px rgba(0, 0, 0, 0.6);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
