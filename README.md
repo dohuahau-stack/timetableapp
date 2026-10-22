@@ -17,6 +17,14 @@ Tạo bản cài Windows:
 npm run tauri build
 ```
 
+## Tải và cài ứng dụng trên Windows
+
+Hiện repository chưa có **GitHub Release** hoặc bộ cài `.exe` được phát hành. Nút **Code → Download ZIP** trên GitHub chỉ tải mã nguồn; file ZIP đó không phải ứng dụng đã cài và cần môi trường Node.js, Rust cùng công cụ build để tự biên dịch.
+
+Khi có bản chính thức, hãy mở [Releases](https://github.com/dohuahau-stack/timetableapp/releases) và tải bộ cài Windows `.exe` (NSIS) đính kèm trong release. Đọc ghi chú phiên bản, kiểm tra SHA-256 nếu release cung cấp, rồi chỉ chạy file tải từ trang này. Nếu Windows hiện cảnh báo SmartScreen vì ứng dụng chưa có chữ ký nhà phát hành được tin cậy, hãy cân nhắc dừng lại và chờ bản có chữ ký; đừng tắt SmartScreen chỉ để cài ứng dụng.
+
+Nếu chưa có release, người có kinh nghiệm có thể tải source, xem mã và tự build theo hướng dẫn ở trên. Không tải file cài đặt được đăng lại từ nguồn không chính thức.
+
 ## Dùng tính năng nhập Excel bằng Gemini
 
 1. Mở [Google AI Studio](https://aistudio.google.com/app/apikey) và đăng nhập tài khoản Google.
