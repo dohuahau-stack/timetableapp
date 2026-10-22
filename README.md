@@ -51,4 +51,4 @@ Mở [GitHub Issues](https://github.com/dohuahau-stack/timetableapp/issues) đ�
 
 ## Giấy phép
 
-Chưa có file LICENSE trong repository. Cho đến khi tác giả chọn và thêm giấy phép, không nên giả định rằng mã nguồn được cấp phép để tái phân phối hoặc tạo bản phái sinh.
+Repository hiện có giấy phép MIT trong file [`LICENSE`](LICENSE). Người dùng có thể xem hoặc tải file đó từ repository; khi sao chép hoặc phân phối mã nguồn, cần giữ lại thông báo bản quyền và nội dung giấy phép. MIT cho phép sử dụng, sửa đổi và phân phối phần mềm theo các điều kiện ghi trong LICENSE, đồng thời cung cấp phần mềm “AS IS” không kèm bảo đảm.
