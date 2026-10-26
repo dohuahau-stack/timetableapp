@@ -48,7 +48,7 @@ impl Default for Settings {
     fn default() -> Self {
         Self {
             api_key: String::new(),
-            model: "gemini-2.5-flash".into(),
+            model: "llama-3.3-70b-versatile".into(),
             last_prompt: String::new(),
             theme: "dark".into(),
         }
@@ -128,5 +128,9 @@ pub fn load_state(path: &Path) -> AppState {
         Err(_) => AppState::default(),
     };
     st.normalize();
+    if st.settings.model.starts_with("gemini-") {
+        st.settings.model = "llama-3.3-70b-versatile".into();
+        st.settings.api_key.clear();
+    }
     st
 }

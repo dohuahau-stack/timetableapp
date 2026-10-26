@@ -1,6 +1,6 @@
 # Thời Khóa Biểu
 
-Ứng dụng thời khóa biểu desktop cho Windows, xây dựng với Tauri 2, React và TypeScript. Ứng dụng quản lý lịch học 7 ngày, việc cần làm và nhắc lịch. Tùy chọn nhập Excel dùng Gemini để chuyển bảng thời khóa biểu thành lịch học.
+Ứng dụng thời khóa biểu desktop cho Windows, xây dựng với Tauri 2, React và TypeScript. Ứng dụng quản lý lịch học 7 ngày, việc cần làm và nhắc lịch. Tùy chọn nhập Excel dùng Groq để chuyển bảng thời khóa biểu thành lịch học.
 
 ## Chạy từ mã nguồn
 
@@ -25,14 +25,14 @@ Chỉ tải file từ repository chính thức. GitHub Releases vẫn là nơi p
 
 Nếu chưa có release, người có kinh nghiệm có thể tải source, xem mã và tự build theo hướng dẫn ở trên. Không tải file cài đặt được đăng lại từ nguồn không chính thức.
 
-## Dùng tính năng nhập Excel bằng Gemini
+## Dùng tính năng nhập Excel bằng Groq
 
-Xem [hướng dẫn sử dụng đầy đủ](docs/HUONG_DAN_SU_DUNG.md) có ảnh minh họa tạo API key, nhập Excel và thêm môn học thêm.
+Xem [hướng dẫn sử dụng đầy đủ](docs/HUONG_DAN_SU_DUNG.md) để tạo Groq API key, nhập Excel và thêm môn học thêm.
 
-1. Mở [Google AI Studio](https://aistudio.google.com/app/apikey) và đăng nhập tài khoản Google.
-2. Chọn **Create API key**. Nếu được hỏi, chọn hoặc tạo Google Cloud project. Google quyết định hạn mức và điều kiện miễn phí theo tài khoản/khu vực; hãy xem thông tin hiển thị trong AI Studio trước khi dùng.
-3. Sao chép key vừa tạo. Không gửi key cho người khác, không dán vào issue, ảnh chụp, source code hoặc commit.
-4. Mở **Cài đặt** trong app, dán key vào trường Gemini API Key và nhập tên model đang được tài khoản AI Studio hỗ trợ.
+1. Mở [Groq Console API Keys](https://console.groq.com/keys) và đăng nhập/tạo tài khoản Groq.
+2. Chọn **Create API Key**, đặt tên nếu được yêu cầu, rồi sao chép key bắt đầu bằng `gsk_`.
+3. Không gửi key cho người khác, không dán vào issue, ảnh chụp, source code hoặc commit.
+4. Mở **Cài đặt** trong app, dán key vào trường Groq API Key. Model mặc định là `llama-3.3-70b-versatile`.
 5. Chọn **Nhập từ Excel bằng AI**, mở file thời khóa biểu, sửa prompt nếu cần rồi xem lại lịch AI đề xuất trước khi áp dụng.
 
 Prompt mẫu (được giữ nguyên trong file để dễ sao chép):
@@ -41,8 +41,9 @@ Prompt mẫu (được giữ nguyên trong file để dễ sao chép):
 
 ## Quyền riêng tư và an toàn
 
-- API key được lưu trong trạng thái cài đặt của app trên máy người dùng. Không commit key thật. Hãy thu hồi key trong AI Studio nếu nghi ngờ bị lộ.
-- Khi nhập Excel, app đọc các sheet và gửi nội dung dạng văn bản cùng prompt tới Gemini API để xử lý. Không chọn bảng có dữ liệu nhạy cảm nếu bạn không muốn gửi nội dung đó tới dịch vụ Google.
+- API key được lưu trong trạng thái cài đặt của app trên máy người dùng. Không commit key thật. Hãy thu hồi key trong Groq Console nếu nghi ngờ bị lộ.
+- Khi nhập Excel, app đọc các sheet và gửi nội dung dạng văn bản cùng prompt tới Groq API để xử lý. Không chọn bảng có dữ liệu nhạy cảm nếu bạn không muốn gửi nội dung đó tới Groq.
+- Groq đã ngừng model `llama-3.3-70b-versatile` trên Free/Developer tier từ 16/08/2026. Tài khoản miễn phí có thể không gọi được model mặc định; xem hướng dẫn sử dụng để biết chi tiết.
 - Các tính năng lịch, việc cần làm và nhắc giờ hoạt động cục bộ. Dữ liệu ứng dụng lưu trong thư mục dữ liệu app của Windows.
 - Hãy xem source và quyền Tauri trong `src-tauri/` trước khi cài. Chỉ tải bản phát hành từ trang **Releases** của repository này; kiểm tra hash/chữ ký phát hành nếu có.
 - Đây là phần mềm mã nguồn mở đang được cộng đồng rà soát; chưa có chứng nhận kiểm toán bảo mật độc lập. Báo cáo lỗ hổng riêng tư qua GitHub Security Advisories, không đăng thông tin khai thác hay key thật trong issue công khai.

@@ -7,7 +7,8 @@ use crate::state::Course;
 const MAX_TABLE_CHARS: usize = 60_000;
 
 const SYSTEM_PROMPT: &str = "Bạn là bộ máy sắp xếp thời khóa biểu chính khóa. \
-Đọc dữ liệu bảng Excel và trích xuất MỌI buổi học thành danh sách JSON theo đúng schema.\n\
+Đọc dữ liệu bảng Excel và trích xuất MỌI buổi học thành JSON hợp lệ theo đúng schema sau:\n\
+{{\"courses\":[{{\"name\":\"...\",\"day\":0,\"session\":\"morning\",\"start\":\"07:15\",\"end\":\"08:00\",\"note\":\"...\"}}]}}.\n\
 Quy ước:\n\
 - day: 0 = Thứ 2, 1 = Thứ 3, 2 = Thứ 4, 3 = Thứ 5, 4 = Thứ 6, 5 = Thứ 7, 6 = Chủ Nhật.\n\
 - session: morning (sáng, trước 12:00), afternoon (chiều, 12:00 đến 17:59), evening (tối, từ 18:00).\n\
@@ -71,30 +72,6 @@ pub fn excel_to_text(path: &str) -> Result<String, String> {
     Ok(out)
 }
 
-fn schema() -> Value {
-    json!({
-        "type": "OBJECT",
-        "properties": {
-            "courses": {
-                "type": "ARRAY",
-                "items": {
-                    "type": "OBJECT",
-                    "properties": {
-                        "name": { "type": "STRING" },
-                        "day": { "type": "INTEGER" },
-                        "session": { "type": "STRING", "enum": ["morning", "afternoon", "evening"] },
-                        "start": { "type": "STRING" },
-                        "end": { "type": "STRING" },
-                        "note": { "type": "STRING" }
-                    },
-                    "required": ["name", "day", "session", "start", "end"]
-                }
-            }
-        },
-        "required": ["courses"]
-    })
-}
-
 async fn post(
     client: &reqwest::Client,
     url: &str,
@@ -103,16 +80,16 @@ async fn post(
 ) -> Result<(u16, String), String> {
     let resp = client
         .post(url)
-        .header("x-goog-api-key", key)
+        .bearer_auth(key)
         .json(body)
         .send()
         .await
-        .map_err(|e| format!("Không kết nối được Gemini: {e}"))?;
+        .map_err(|e| format!("Không kết nối được Groq: {e}"))?;
     let status = resp.status().as_u16();
     let text = resp
         .text()
         .await
-        .map_err(|e| format!("Lỗi đọc phản hồi từ Gemini: {e}"))?;
+        .map_err(|e| format!("Lỗi đọc phản hồi từ Groq: {e}"))?;
     Ok((status, text))
 }
 
@@ -121,7 +98,7 @@ fn api_error(status: u16, text: &str) -> String {
         .ok()
         .and_then(|v| v["error"]["message"].as_str().map(String::from))
         .unwrap_or_else(|| text.chars().take(300).collect());
-    format!("Gemini trả về lỗi {status}: {msg}")
+    format!("Groq trả về lỗi {status}: {msg}")
 }
 
 fn norm_time(s: &str) -> Option<String> {
@@ -224,28 +201,27 @@ fn parse_courses(raw: &str) -> Result<Vec<Course>, String> {
     Ok(courses)
 }
 
-pub async fn call_gemini(
+pub async fn call_groq(
     api_key: &str,
     model: &str,
     prompt: &str,
     table: &str,
 ) -> Result<Vec<Course>, String> {
-    let model = model.trim().trim_start_matches("models/");
-    let url = format!("https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent");
+    let model = model.trim();
+    let url = "https://api.groq.com/openai/v1/chat/completions";
 
     let user_text = format!(
         "Câu lệnh của người dùng:\n{prompt}\n\nDữ liệu Excel (mỗi dòng là một hàng, các ô cách nhau bằng \" | \"):\n{table}"
     );
 
-    let mut body = json!({
-        "systemInstruction": { "parts": [{ "text": SYSTEM_PROMPT }] },
-        "contents": [{ "role": "user", "parts": [{ "text": user_text }] }],
-        "generationConfig": {
-            "responseMimeType": "application/json",
-            "responseSchema": schema(),
-            "temperature": 0.1,
-            "thinkingConfig": { "thinkingBudget": 0 }
-        }
+    let body = json!({
+        "model": model,
+        "messages": [
+            { "role": "system", "content": SYSTEM_PROMPT },
+            { "role": "user", "content": user_text }
+        ],
+        "response_format": { "type": "json_object" },
+        "temperature": 0.1
     });
 
     let client = reqwest::Client::builder()
@@ -253,37 +229,14 @@ pub async fn call_gemini(
         .build()
         .map_err(|e| e.to_string())?;
 
-    // Thử tắt "suy nghĩ" để nhanh nhất. Model nào không hỗ trợ sẽ báo 400 → gửi lại không kèm tham số này.
-    let (mut status, mut text) = post(&client, &url, api_key, &body).await?;
-    let lower = text.to_lowercase();
-    if status == 400 && (lower.contains("think") || lower.contains("budget")) {
-        if let Some(g) = body["generationConfig"].as_object_mut() {
-            g.remove("thinkingConfig");
-        }
-        let retry = post(&client, &url, api_key, &body).await?;
-        status = retry.0;
-        text = retry.1;
-    }
+    let (status, text) = post(&client, url, api_key, &body).await?;
     if !(200..300).contains(&status) {
         return Err(api_error(status, &text));
     }
 
-    let v: Value = serde_json::from_str(&text).map_err(|e| format!("Phản hồi Gemini không hợp lệ: {e}"))?;
-    let parts = v["candidates"][0]["content"]["parts"]
-        .as_array()
-        .ok_or_else(|| {
-            let reason = v["promptFeedback"]["blockReason"].as_str().unwrap_or("không rõ lý do");
-            format!("Gemini không trả về nội dung ({reason}).")
-        })?;
-
-    let mut out = String::new();
-    for p in parts {
-        if p["thought"].as_bool() == Some(true) {
-            continue;
-        }
-        if let Some(t) = p["text"].as_str() {
-            out.push_str(t);
-        }
-    }
-    parse_courses(&out)
+    let v: Value = serde_json::from_str(&text).map_err(|e| format!("Phản hồi Groq không hợp lệ: {e}"))?;
+    let out = v["choices"][0]["message"]["content"]
+        .as_str()
+        .ok_or_else(|| "Groq không trả về nội dung JSON.".to_string())?;
+    parse_courses(out)
 }

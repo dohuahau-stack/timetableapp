@@ -69,7 +69,7 @@ async fn import_excel(
         (st.settings.api_key.clone(), st.settings.model.clone())
     };
     if key.trim().is_empty() {
-        return Err("Chưa có Gemini API Key. Mở Cài đặt để nhập key.".into());
+        return Err("Chưa có Groq API Key. Mở Cài đặt để nhập key.".into());
     }
     if model.trim().is_empty() {
         return Err("Chưa có tên model. Mở Cài đặt để nhập tên model.".into());
@@ -85,7 +85,7 @@ async fn import_excel(
         prompt
     };
 
-    excel_ai::call_gemini(key.trim(), &model, &prompt, &table).await
+    excel_ai::call_groq(key.trim(), &model, &prompt, &table).await
 }
 
 pub fn run() {
