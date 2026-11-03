@@ -78,13 +78,13 @@ function SettingsForm({ settings, onSave }: { settings: Settings; onSave: Props[
       </DialogHeader>
 
       <div className="flex flex-col gap-4">
-        <Field label="Gemini API Key">
+        <Field label="SambaNova API Key">
           <div className="relative">
             <Input
               type={showKey ? "text" : "password"}
               value={apiKey}
               onChange={(e) => setApiKey(e.target.value)}
-              placeholder="AIza…"
+              placeholder="API key SambaNova"
               autoComplete="off"
               spellCheck={false}
               className="pr-11"
@@ -100,11 +100,11 @@ function SettingsForm({ settings, onSave }: { settings: Settings; onSave: Props[
           </div>
         </Field>
 
-        <Field label="Tên model" hint="Nhập tự do, ví dụ gemini-2.5-flash hoặc tên model mới hơn.">
+        <Field label="Tên model" hint="Nhập tự do, ví dụ Meta-Llama-3.3-70B-Instruct hoặc tên model mới hơn.">
           <Input
             value={model}
             onChange={(e) => setModel(e.target.value)}
-            placeholder="gemini-2.5-flash"
+            placeholder="Meta-Llama-3.3-70B-Instruct"
             spellCheck={false}
           />
         </Field>

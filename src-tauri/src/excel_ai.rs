@@ -103,20 +103,20 @@ async fn post(
 ) -> Result<(u16, String), String> {
     let resp = client
         .post(url)
-        .header("x-goog-api-key", key)
+        .bearer_auth(key)
         .json(body)
         .send()
         .await
-        .map_err(|e| format!("Không kết nối được Gemini: {e}"))?;
+        .map_err(|e| format!("Không kết nối được SambaNova: {e}"))?;
     let status = resp.status().as_u16();
     let text = resp
         .text()
         .await
-        .map_err(|e| format!("Lỗi đọc phản hồi từ Gemini: {e}"))?;
+        .map_err(|e| format!("Lỗi đọc phản hồi từ SambaNova: {e}"))?;
     Ok((status, text))
 }
 
-/// Retry transient transport failures and overloaded/rate-limited Gemini responses.
+/// Retry transient transport failures and overloaded/rate-limited SambaNova responses.
 /// This makes at most three requests, waiting 2s then 5s between them.
 async fn post_with_retry(
     client: &reqwest::Client,
@@ -147,7 +147,7 @@ async fn post_with_retry(
         tokio::time::sleep(Duration::from_secs(RETRY_DELAYS[attempt])).await;
     }
 
-    Err(format!("Gemini tạm thời không khả dụng sau 3 lần thử. Lỗi cuối: {last_error}"))
+    Err(format!("SambaNova tạm thời không khả dụng sau 3 lần thử. Lỗi cuối: {last_error}"))
 }
 
 fn api_error(status: u16, text: &str) -> String {
@@ -155,7 +155,7 @@ fn api_error(status: u16, text: &str) -> String {
         .ok()
         .and_then(|v| v["error"]["message"].as_str().map(String::from))
         .unwrap_or_else(|| text.chars().take(300).collect());
-    format!("Gemini trả về lỗi {status}: {msg}")
+    format!("SambaNova trả về lỗi {status}: {msg}")
 }
 
 fn norm_time(s: &str) -> Option<String> {
@@ -258,66 +258,38 @@ fn parse_courses(raw: &str) -> Result<Vec<Course>, String> {
     Ok(courses)
 }
 
-pub async fn call_gemini(
+pub async fn call_sambanova(
     api_key: &str,
     model: &str,
     prompt: &str,
     table: &str,
 ) -> Result<Vec<Course>, String> {
-    let model = model.trim().trim_start_matches("models/");
-    let url = format!("https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent");
-
+    let model = model.trim();
+    let url = "https://api.sambanova.ai/v1/chat/completions";
     let user_text = format!(
         "Câu lệnh của người dùng:\n{prompt}\n\nDữ liệu Excel (mỗi dòng là một hàng, các ô cách nhau bằng \" | \"):\n{table}"
     );
-
-    let mut body = json!({
-        "systemInstruction": { "parts": [{ "text": SYSTEM_PROMPT }] },
-        "contents": [{ "role": "user", "parts": [{ "text": user_text }] }],
-        "generationConfig": {
-            "responseMimeType": "application/json",
-            "responseSchema": schema(),
-            "temperature": 0.1,
-            "thinkingConfig": { "thinkingBudget": 0 }
-        }
+    let body = json!({
+        "model": model,
+        "messages": [
+            { "role": "system", "content": SYSTEM_PROMPT },
+            { "role": "user", "content": user_text }
+        ],
+        "response_format": { "type": "json_object" },
+        "temperature": 0.1
     });
-
     let client = reqwest::Client::builder()
         .timeout(Duration::from_secs(120))
         .build()
         .map_err(|e| e.to_string())?;
-
-    // Thử tắt "suy nghĩ" để nhanh nhất. Model nào không hỗ trợ sẽ báo 400 → gửi lại không kèm tham số này.
-    let (mut status, mut text) = post_with_retry(&client, &url, api_key, &body).await?;
-    let lower = text.to_lowercase();
-    if status == 400 && (lower.contains("think") || lower.contains("budget")) {
-        if let Some(g) = body["generationConfig"].as_object_mut() {
-            g.remove("thinkingConfig");
-        }
-        let retry = post_with_retry(&client, &url, api_key, &body).await?;
-        status = retry.0;
-        text = retry.1;
-    }
+    let (status, text) = post_with_retry(&client, url, api_key, &body).await?;
     if !(200..300).contains(&status) {
         return Err(api_error(status, &text));
     }
-
-    let v: Value = serde_json::from_str(&text).map_err(|e| format!("Phản hồi Gemini không hợp lệ: {e}"))?;
-    let parts = v["candidates"][0]["content"]["parts"]
-        .as_array()
-        .ok_or_else(|| {
-            let reason = v["promptFeedback"]["blockReason"].as_str().unwrap_or("không rõ lý do");
-            format!("Gemini không trả về nội dung ({reason}).")
-        })?;
-
-    let mut out = String::new();
-    for p in parts {
-        if p["thought"].as_bool() == Some(true) {
-            continue;
-        }
-        if let Some(t) = p["text"].as_str() {
-            out.push_str(t);
-        }
-    }
-    parse_courses(&out)
+    let v: Value = serde_json::from_str(&text)
+        .map_err(|e| format!("Phản hồi SambaNova không hợp lệ: {e}"))?;
+    let out = v["choices"][0]["message"]["content"]
+        .as_str()
+        .ok_or_else(|| "SambaNova không trả về nội dung văn bản.".to_string())?;
+    parse_courses(out)
 }

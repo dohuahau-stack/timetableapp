@@ -48,7 +48,7 @@ impl Default for Settings {
     fn default() -> Self {
         Self {
             api_key: String::new(),
-            model: "gemini-2.5-flash".into(),
+            model: "Meta-Llama-3.3-70B-Instruct".into(),
             last_prompt: String::new(),
             theme: "dark".into(),
         }
