@@ -116,6 +116,40 @@ async fn post(
     Ok((status, text))
 }
 
+/// Retry transient transport failures and overloaded/rate-limited Gemini responses.
+/// This makes at most three requests, waiting 2s then 5s between them.
+async fn post_with_retry(
+    client: &reqwest::Client,
+    url: &str,
+    key: &str,
+    body: &Value,
+) -> Result<(u16, String), String> {
+    const RETRY_DELAYS: [u64; 2] = [2, 5];
+    let mut last_error = String::new();
+
+    for attempt in 0..=RETRY_DELAYS.len() {
+        match post(client, url, key, body).await {
+            Ok((status, text)) if matches!(status, 429 | 502 | 503 | 504) => {
+                last_error = api_error(status, &text);
+                if attempt == RETRY_DELAYS.len() {
+                    break;
+                }
+            }
+            Ok(response) => return Ok(response),
+            Err(error) => {
+                last_error = error;
+                if attempt == RETRY_DELAYS.len() {
+                    break;
+                }
+            }
+        }
+
+        tokio::time::sleep(Duration::from_secs(RETRY_DELAYS[attempt])).await;
+    }
+
+    Err(format!("Gemini tạm thời không khả dụng sau 3 lần thử. Lỗi cuối: {last_error}"))
+}
+
 fn api_error(status: u16, text: &str) -> String {
     let msg = serde_json::from_str::<Value>(text)
         .ok()
@@ -254,13 +288,13 @@ pub async fn call_gemini(
         .map_err(|e| e.to_string())?;
 
     // Thử tắt "suy nghĩ" để nhanh nhất. Model nào không hỗ trợ sẽ báo 400 → gửi lại không kèm tham số này.
-    let (mut status, mut text) = post(&client, &url, api_key, &body).await?;
+    let (mut status, mut text) = post_with_retry(&client, &url, api_key, &body).await?;
     let lower = text.to_lowercase();
     if status == 400 && (lower.contains("think") || lower.contains("budget")) {
         if let Some(g) = body["generationConfig"].as_object_mut() {
             g.remove("thinkingConfig");
         }
-        let retry = post(&client, &url, api_key, &body).await?;
+        let retry = post_with_retry(&client, &url, api_key, &body).await?;
         status = retry.0;
         text = retry.1;
     }

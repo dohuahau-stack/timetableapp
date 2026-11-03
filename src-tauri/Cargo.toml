@@ -22,6 +22,7 @@ serde_json = "1"
 calamine = "0.36"
 chrono = "0.4"
 reqwest = { version = "0.12", default-features = false, features = ["json", "native-tls"] }
+tokio = { version = "1", features = ["time"] }
 
 [profile.release]
 opt-level = "s"
